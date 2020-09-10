@@ -6,7 +6,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/solo-io/ext-auth-plugin-examples/pkg/checks"
+	"github.com/tidepool-org/gloo-remote-auth-plugin/pkg/checks"
 )
 
 func main() {

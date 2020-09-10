@@ -9,5 +9,5 @@ import (
 
 func TestHeader(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "RequiredHeader Suite")
+	RunSpecs(t, "RemoteAuth Suite")
 }

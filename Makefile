@@ -8,16 +8,16 @@ format:
 #----------------------------------------------------------------------------------
 
 # Set this variable to the version of GlooE you want to target
-GLOOE_VERSION ?= 1.3.8
+GLOOE_VERSION ?= 1.4.4
 
 # Set this variable to the name of your build plugin
-PLUGIN_BUILD_NAME ?= RequiredHeader.so
+PLUGIN_BUILD_NAME ?= RemoteAuth.so
 
 # Set this variable to the image name and tag of your plugin
-PLUGIN_IMAGE ?= gloo-ext-auth-plugins:$(GLOOE_VERSION)
+PLUGIN_IMAGE ?= gloo-remote-auth-plugin:$(GLOOE_VERSION)
 
 # Set this variable to the name of your plugin
-PLUGIN_NAME ?= required_header
+PLUGIN_NAME ?= remote_auth
 
 # Set this variable to the base image name for the container that will have the compiled plugin
 RUN_IMAGE ?= alpine:3.11
@@ -115,10 +115,10 @@ verify-plugin: $(GLOOE_DIR)/verify-plugins-linux-amd64
 	$(GLOOE_DIR)/verify-plugins-linux-amd64 -pluginDir plugins -manifest plugins/plugin_manifest.yaml
 
 .PHONY: build-plugins-for-tests
-build-plugins-for-tests: $(EXAMPLES_DIR)/required_header/RequiredHeader.so
+build-plugins-for-tests: $(EXAMPLES_DIR)/remote_auth/RemoteAuth.so
 
-$(EXAMPLES_DIR)/required_header/RequiredHeader.so: $(SOURCES)
-	go build -buildmode=plugin -o $(EXAMPLES_DIR)/required_header/RequiredHeader.so $(EXAMPLES_DIR)/required_header/plugin.go
+$(EXAMPLES_DIR)/remote_auth/RemoteAuth.so: $(SOURCES)
+	go build -buildmode=plugin -o $(EXAMPLES_DIR)/remote_auth/RemoteAuth.so $(EXAMPLES_DIR)/remote_auth/plugin.go
 
 .PHONY: clean
 clean:

@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-	"github.com/solo-io/ext-auth-plugin-examples/pkg/checks"
+	"github.com/tidepool-org/gloo-remote-auth-plugin/pkg/checks"
 )
 
 const (

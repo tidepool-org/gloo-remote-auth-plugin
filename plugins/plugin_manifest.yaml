@@ -1,9 +1,11 @@
-name: RequiredHeader
-pluginFileName: RequiredHeader.so
+name: RemoteAuth
+pluginFileName: RemoteAuth.so
 exportedSymbolName: Plugin
 config:
-  RequiredHeader: my-auth-header
-  AllowedValues:
-  - foo
-  - bar
-  - baz
+  AuthUrl: http://shoreline:9107/user
+  ForwardRequestHeaders:
+    - x-tidepool-session-token
+  ResponseHeaders:
+    isserver: x-tidepool-server-access
+    userid: x-tidepool-user-id
+    roles: x-tidepool-user-roles
