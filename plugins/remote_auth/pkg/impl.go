@@ -155,7 +155,7 @@ func stringifyValue(raw interface{}) *string {
 		value = fmt.Sprintf("%v", v.Float())
 	case reflect.String:
 		value = v.String()
-	case reflect.Slice:
+	case reflect.Slice, reflect.Array:
 		var arr []string
 		for i := 0; i < v.Len(); i++ {
 			if s := stringifyValue(v.Index(i).Interface()); s != nil {
