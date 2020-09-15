@@ -28,6 +28,7 @@ type RemoteAuthPlugin struct{}
 type Config struct {
 	AuthUrl               string
 	ForwardRequestHeaders []string
+	RequestIdHeader       string
 	ResponseHeaders       map[string]string
 }
 
@@ -44,6 +45,7 @@ func (p *RemoteAuthPlugin) GetAuthService(ctx context.Context, configInstance in
 	logger(ctx).Infow("Parsed RemoteAuthPlugin config",
 		zap.Any("authUrl", config.AuthUrl),
 		zap.Any("forwardRequestHeaders", config.ForwardRequestHeaders),
+		zap.Any("requestIdHeader", config.RequestIdHeader),
 		zap.Any("responseHeaders", config.ResponseHeaders),
 	)
 
@@ -62,6 +64,7 @@ func (p *RemoteAuthPlugin) GetAuthService(ctx context.Context, configInstance in
 		AuthUrl:                config.AuthUrl,
 		ForwardRequestHeaders:  forwardHeadersMap,
 		AttributesToHeadersMap: attributesToHeaderMap,
+		RequestIdHeader:        config.RequestIdHeader,
 	}, nil
 }
 
@@ -70,6 +73,7 @@ type RemoteAuthService struct {
 	AuthUrl                string
 	ForwardRequestHeaders  map[string]bool
 	AttributesToHeadersMap map[string]string
+	RequestIdHeader        string
 }
 
 func (c *RemoteAuthService) Start(context.Context) error {
@@ -77,6 +81,11 @@ func (c *RemoteAuthService) Start(context.Context) error {
 }
 
 func (c *RemoteAuthService) Authorize(ctx context.Context, authzRequest *api.AuthorizationRequest) (*api.AuthorizationResponse, error) {
+	log := logger(ctx)
+	if requestId := c.extractRequestId(authzRequest); requestId != nil {
+		log = log.With("request_id", requestId)
+	}
+
 	request, err := http.NewRequestWithContext(ctx, "GET", c.AuthUrl, io.Reader(nil))
 	if err != nil {
 		return nil, err
@@ -85,19 +94,19 @@ func (c *RemoteAuthService) Authorize(ctx context.Context, authzRequest *api.Aut
 	c.forwardAllowedHeaders(request, authzRequest)
 	response, err := c.httpClient.Do(request)
 	if err != nil {
-		logger(ctx).Errorw("Unexpected error from upstream", zap.Error(err))
+		log.Errorw("Unexpected error from upstream", zap.Error(err))
 		return nil, err
 	}
 
 	if response.StatusCode != 200 {
-		logger(ctx).Infow("Unsuccessful response from upstream, denying access")
+		log.Infow("Unsuccessful response from upstream, denying access", zap.Int("status_code", response.StatusCode))
 		return api.UnauthenticatedResponse(), nil
 	}
 
-	logger(ctx).Infow("Successful response from upstream, allowing request")
+	log.Debug("Successful response from upstream, allowing request")
 	responseHeaders, err := c.extractResponseHeaders(response.Body)
 	if err != nil {
-		logger(ctx).Errorw("Unexpected error while extracting response headers", zap.Error(err))
+		log.Errorw("Unexpected error while extracting response headers", zap.Error(err))
 		return nil, err
 	}
 
@@ -111,11 +120,25 @@ func (c *RemoteAuthService) Authorize(ctx context.Context, authzRequest *api.Aut
 }
 
 func (c *RemoteAuthService) forwardAllowedHeaders(remoteRequest *http.Request, authzRequest *api.AuthorizationRequest) {
-	for key, value := range authzRequest.CheckRequest.GetAttributes().GetRequest().GetHttp().GetHeaders() {
-		if v, ok := c.ForwardRequestHeaders[key]; ok && v {
-			remoteRequest.Header.Add(key, value)
+	headers := authzRequest.CheckRequest.GetAttributes().GetRequest().GetHttp().GetHeaders()
+	for key, shouldForward := range c.ForwardRequestHeaders {
+		if shouldForward {
+			if value, ok := headers[key]; ok {
+				remoteRequest.Header.Add(key, value)
+			}
 		}
 	}
+}
+
+func (c *RemoteAuthService) extractRequestId(authzRequest *api.AuthorizationRequest) *string {
+	if c.RequestIdHeader == "" {
+		return nil
+	}
+	value, exists := authzRequest.CheckRequest.GetAttributes().GetRequest().GetHttp().GetHeaders()[c.RequestIdHeader]
+	if !exists {
+		return nil
+	}
+	return &value
 }
 
 func (c *RemoteAuthService) extractResponseHeaders(authzBody io.ReadCloser) ([]*envoycorev2.HeaderValueOption, error) {
