@@ -130,11 +130,14 @@ ci: build docker-push-ci
 .PHONY: docker-push-ci
 docker-push-ci: docker-login
 ifdef TRAVIS_BRANCH
+ifdef TRAVIS_COMMIT
+ifndef TRAVIS_PULL_REQUEST_BRANCH
+	docker tag $(PLUGIN_IMAGE) $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-$(TRAVIS_COMMIT)
 	docker tag $(PLUGIN_IMAGE) $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-latest
+	docker push $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-$(TRAVIS_COMMIT)
 	docker push $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-latest
 endif
-ifeq ("$(TRAVIS_BRANCH)","master")
-	docker push $(PLUGIN_IMAGE)
+endif
 endif
 
 .PHONY: docker-login
