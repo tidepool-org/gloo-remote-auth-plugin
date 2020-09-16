@@ -136,6 +136,9 @@ ifndef TRAVIS_PULL_REQUEST_BRANCH
 	docker tag $(PLUGIN_IMAGE) $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-latest
 	docker push $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-$(TRAVIS_COMMIT)
 	docker push $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-latest
+ifeq ("$(TRAVIS_BRANCH)","master")
+	docker push $(PLUGIN_IMAGE)
+endif
 endif
 endif
 endif
