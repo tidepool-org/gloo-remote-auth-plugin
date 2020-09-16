@@ -2,10 +2,12 @@ name: RemoteAuth
 pluginFileName: RemoteAuth.so
 exportedSymbolName: Plugin
 config:
-  AuthUrl: http://shoreline:9107/user
+  AuthUrl: http://shoreline:9107/token
   ForwardRequestHeaders:
     - x-tidepool-session-token
+    - x-tidepool-trace-session
   ResponseHeaders:
     isserver: x-tidepool-server-access
-    userid: x-tidepool-user-id
-    roles: x-tidepool-user-roles
+    userid: x-tidepool-subject-id
+    roles: x-tidepool-roles
+  RequestIdHeader: x-tidepool-trace-session

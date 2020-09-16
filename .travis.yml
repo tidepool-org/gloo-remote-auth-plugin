@@ -1,0 +1,10 @@
+sudo: false
+
+env:
+  - GO111MODULE=on
+
+script:
+  - make ci
+
+services:
+  - docker

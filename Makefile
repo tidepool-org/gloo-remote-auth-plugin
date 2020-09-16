@@ -14,7 +14,7 @@ GLOOE_VERSION ?= 1.4.4
 PLUGIN_BUILD_NAME ?= RemoteAuth.so
 
 # Set this variable to the image name and tag of your plugin
-PLUGIN_IMAGE ?= gloo-remote-auth-plugin:$(GLOOE_VERSION)
+PLUGIN_IMAGE ?= tidepool/gloo-remote-auth-plugin:$(GLOOE_VERSION)
 
 # Set this variable to the name of your plugin
 PLUGIN_NAME ?= remote_auth
@@ -123,3 +123,26 @@ $(EXAMPLES_DIR)/remote_auth/RemoteAuth.so: $(SOURCES)
 .PHONY: clean
 clean:
 	rm -rf _glooe
+
+.PHONY: ci
+ci: build docker-push-ci
+
+.PHONY: docker-push-ci
+docker-push-ci: docker-login
+ifdef TRAVIS_BRANCH
+ifdef TRAVIS_COMMIT
+ifndef TRAVIS_PULL_REQUEST_BRANCH
+	docker tag $(PLUGIN_IMAGE) $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-$(TRAVIS_COMMIT)
+	docker tag $(PLUGIN_IMAGE) $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-latest
+	docker push $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-$(TRAVIS_COMMIT)
+	docker push $(PLUGIN_IMAGE)-$(subst /,-,$(TRAVIS_BRANCH))-latest
+ifeq ("$(TRAVIS_BRANCH)","master")
+	docker push $(PLUGIN_IMAGE)
+endif
+endif
+endif
+endif
+
+.PHONY: docker-login
+docker-login:
+	@echo "$(DOCKER_PASSWORD)" | docker login --username "$(DOCKER_USERNAME)" --password-stdin
