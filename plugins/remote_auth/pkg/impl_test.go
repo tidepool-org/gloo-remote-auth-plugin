@@ -1,8 +1,9 @@
 package pkg
 
 import (
-	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"strings"
 	"testing"
 )
 
@@ -17,12 +18,11 @@ func TestExtractHeaders(t *testing.T) {
 		"not-present": "x-auth-not-present",
 	}
 
-	var data map[string]interface{}
-	if err := json.Unmarshal([]byte(body), &data); err != nil {
-		t.Fatal(fmt.Errorf("unable to unmarshal test data: %v", err))
+	authz := ioutil.NopCloser(strings.NewReader(body))
+	headers, err := extractResponseHeaders(authz, attr)
+	if err != nil {
+		t.Fatal(fmt.Errorf("unable to extract headers: %v", err))
 	}
-
-	headers := extractHeaders(data, attr)
 	expectations := map[string]string{
 		"x-auth-subject-id": "123456",
 		"x-auth-server-access": "true",

@@ -55,11 +55,7 @@ func (p *RemoteAuthPlugin) GetAuthService(ctx context.Context, configInstance in
 		forwardHeadersMap[v] = true
 	}
 
-	attributesToHeaderMap := map[string]string{}
-	for headerKey, attribute := range config.ResponseHeaders {
-		attributesToHeaderMap[attribute] = headerKey
-	}
-
+	attributesToHeaderMap := config.ResponseHeaders
 	return &RemoteAuthService{
 		httpClient:             &http.Client{},
 		AuthUrl:                config.AuthUrl,
@@ -104,7 +100,7 @@ func (c *RemoteAuthService) Authorize(ctx context.Context, authzRequest *api.Aut
 		return api.UnauthenticatedResponse(), nil
 	}
 
-	responseHeaders, err := c.extractResponseHeaders(response.Body)
+	responseHeaders, err := extractResponseHeaders(response.Body, c.AttributesToHeadersMap)
 	if err != nil {
 		log.Errorw("Unexpected error while extracting response headers", zap.Error(err))
 		return nil, err
@@ -145,16 +141,12 @@ func (c *RemoteAuthService) extractRequestId(authzRequest *api.AuthorizationRequ
 	return &value
 }
 
-func (c *RemoteAuthService) extractResponseHeaders(authzBody io.ReadCloser) ([]*envoycorev2.HeaderValueOption, error) {
+func extractResponseHeaders(authzBody io.ReadCloser, attributesToHeadersMap map[string]string) ([]*envoycorev2.HeaderValueOption, error) {
 	var data map[string]interface{}
 	if err := json.NewDecoder(authzBody).Decode(&data); err != nil {
 		return nil, err
 	}
 
-	return extractHeaders(data, c.AttributesToHeadersMap), nil
-}
-
-func extractHeaders(data map[string]interface{}, attributesToHeadersMap map[string]string) []*envoycorev2.HeaderValueOption {
 	var headers []*envoycorev2.HeaderValueOption
 	for attribute, header := range attributesToHeadersMap {
 		if raw, ok := data[attribute]; ok {
@@ -169,7 +161,7 @@ func extractHeaders(data map[string]interface{}, attributesToHeadersMap map[stri
 		}
 	}
 
-	return headers
+	return headers, nil
 }
 
 func stringifyValue(raw interface{}) *string {
