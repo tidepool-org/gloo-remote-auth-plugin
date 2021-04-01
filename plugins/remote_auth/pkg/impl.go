@@ -111,7 +111,7 @@ func (c *RemoteAuthService) Authorize(ctx context.Context, authzRequest *api.Aut
 	}
 	logger(ctx).Infow(
 		"Successful response from upstream, allowing request",
-		zap.Array("response_headers", responseHeaders),
+		zap.String("response_headers", fmt.Sprintf("%v", responseHeaders)),
 	)
 
 	authzRresponse := api.AuthorizedResponse()
@@ -145,14 +145,18 @@ func (c *RemoteAuthService) extractRequestId(authzRequest *api.AuthorizationRequ
 	return &value
 }
 
-func (c *RemoteAuthService) extractResponseHeaders(authzBody io.ReadCloser) (ResponseHeaders, error) {
+func (c *RemoteAuthService) extractResponseHeaders(authzBody io.ReadCloser) ([]*envoycorev2.HeaderValueOption, error) {
 	var data map[string]interface{}
 	if err := json.NewDecoder(authzBody).Decode(&data); err != nil {
 		return nil, err
 	}
 
+	return extractHeaders(data, c.AttributesToHeadersMap), nil
+}
+
+func extractHeaders(data map[string]interface{}, attributesToHeadersMap map[string]string) []*envoycorev2.HeaderValueOption {
 	var headers []*envoycorev2.HeaderValueOption
-	for attribute, header := range c.AttributesToHeadersMap {
+	for attribute, header := range attributesToHeadersMap {
 		if raw, ok := data[attribute]; ok {
 			if value := stringifyValue(raw); value != nil {
 				headers = append(headers, &envoycorev2.HeaderValueOption{
@@ -165,7 +169,7 @@ func (c *RemoteAuthService) extractResponseHeaders(authzBody io.ReadCloser) (Res
 		}
 	}
 
-	return headers, nil
+	return headers
 }
 
 func stringifyValue(raw interface{}) *string {
