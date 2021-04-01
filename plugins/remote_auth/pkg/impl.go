@@ -10,6 +10,7 @@ import (
 	"github.com/solo-io/ext-auth-plugins/api"
 	"github.com/solo-io/go-utils/contextutils"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"io"
 	"net/http"
 	"reflect"
@@ -103,12 +104,15 @@ func (c *RemoteAuthService) Authorize(ctx context.Context, authzRequest *api.Aut
 		return api.UnauthenticatedResponse(), nil
 	}
 
-	log.Debug("Successful response from upstream, allowing request")
 	responseHeaders, err := c.extractResponseHeaders(response.Body)
 	if err != nil {
 		log.Errorw("Unexpected error while extracting response headers", zap.Error(err))
 		return nil, err
 	}
+	logger(ctx).Infow(
+		"Successful response from upstream, allowing request",
+		zap.Array("response_headers", responseHeaders),
+	)
 
 	authzRresponse := api.AuthorizedResponse()
 	authzRresponse.CheckResponse.HttpResponse = &envoyauthv2.CheckResponse_OkResponse{
@@ -141,7 +145,7 @@ func (c *RemoteAuthService) extractRequestId(authzRequest *api.AuthorizationRequ
 	return &value
 }
 
-func (c *RemoteAuthService) extractResponseHeaders(authzBody io.ReadCloser) ([]*envoycorev2.HeaderValueOption, error) {
+func (c *RemoteAuthService) extractResponseHeaders(authzBody io.ReadCloser) (ResponseHeaders, error) {
 	var data map[string]interface{}
 	if err := json.NewDecoder(authzBody).Decode(&data); err != nil {
 		return nil, err
@@ -194,4 +198,16 @@ func stringifyValue(raw interface{}) *string {
 
 func logger(ctx context.Context) *zap.SugaredLogger {
 	return contextutils.LoggerFrom(contextutils.WithLogger(ctx, "remote_auth_plugin"))
+}
+
+type ResponseHeaders []*envoycorev2.HeaderValueOption
+
+func (r ResponseHeaders) MarshalLogArray(marshaler zapcore.ArrayEncoder) error {
+	for _, opt := range r {
+		if opt != nil && opt.Header != nil {
+			marshaler.AppendString(fmt.Sprintf("%s: %s", opt.Header.Key, opt.Header.Value))
+		}
+	}
+
+	return nil
 }
